@@ -1,10 +1,13 @@
 # cango.aes ：仅头文件的 C++20 AES 实现
 
-个人学习造轮子。
+## 特点(feature)
 
-参考：
-- [AES128 标准PDF](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf)
-- [AES库](https://github.com/SergeyBel/AES)
+- 内部无动态内存分配，使用 `std::array` 完成密钥准备工作
+- 简单易懂的对象封装
+- 支持编译时加密解密
+- 适合个人学习 AES 或造轮子
+
+## 例子(example)
 
 提供了：
 - `cango::aes::AES128Cryptor`
@@ -14,15 +17,25 @@
 指定主钥和 16 字节字块后可进行加密解密：
 
 ```c++
-std::array<std::uint8_t, 16> main_key{/*主密钥, AES128 规定主密钥有 128 二进制位*/};
+constexpr std::array<std::uint8_t, 16> main_key{/*主密钥, AES128 规定主密钥有 128 二进制位*/};
+constexpr std::array<std::uint8_t, 16> plain {/*原文*/};
+
+// 编译时加密解密
+constexpr auto const_cryptor = AES128Cryptor::create_const(main_key);
+constexpr auto encrypted = AES128Cryptor::encrypt(const_cryptor, plain);
+constexpr auto decrypted = AES128Cryptor::decrypt(const_cryptor, encrypted);
+static_assert(decrypted == plain, "failed: " "decrypted == plain");
+
+// 运行时加密解密
 const AES128Cryptor cryptor{main_key};//初始化工具
+auto buffer = plain;
+cryptor.encrypt(buffer);
+cryptor.decrypt(buffer);
+assert(buffer == plain);
 
-std::array<std::uint8_t, 16> buffer0{/*原文*/};
-std::array<std::uint8_t, 16> buffer1{/*原文*/};
-
-// 使用工具加密解密
-cryptor.encrypt(buffer0);
-cryptor.encrypt(buffer1);
-cryptor.decrypt(buffer0);
-cryptor.decrypt(buffer1);
 ```
+
+## 参考(reference)
+
+- [AES128 标准PDF](https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf)
+- [AES库](https://github.com/SergeyBel/AES)

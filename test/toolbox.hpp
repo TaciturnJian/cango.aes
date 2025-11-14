@@ -3,29 +3,21 @@
 #include <format>
 #include <functional>
 #include <iostream>
+#include <list>
 #include <print>
+#include <sstream>
 
 #include <cango/aes.hpp>
 
 using namespace cango::aes;
 using namespace cango::aes::details;
 
-inline void print_word(const Word &word) { for (const auto byte: word.bytes) std::print(" {:02x}", byte); }
-
-inline void print_word_matrix(const std::span<const Word> matrix) {
-    std::cout << "[";
-    for (const auto byte : matrix) {
-        print_word(byte);
+std::string bytes_to_string(const auto& bytes) {
+    std::ostringstream ss{};
+    for (const auto byte: bytes) {
+        std::print(ss, " {:02x}", byte);
     }
-    std::cout << " ]" << std::dec << std::endl;
-}
-
-inline void print_word_matrix_row(const std::span<const Word> matrix) {
-    std::cout << "[";
-    for (const auto &row: matrix)
-        print_word(row);
-
-    std::cout << " ]" << std::dec << std::endl;
+    return ss.str();
 }
 
 struct toolbox {
@@ -38,7 +30,7 @@ struct toolbox {
     template<typename... Args>
     void log(const std::format_string<Args...> fmt, Args &&... args) {
         if (!verbose) return;
-        std::println(fmt, std::forward<Args>(args)...);
+        std::cout << std::format(fmt, std::forward<Args>(args)...) << std::endl;
     }
 
     void execute(const std::string_view name, const std::function<bool()> &func) {

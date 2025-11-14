@@ -55,6 +55,59 @@ struct RoundKeys {
         return states[index / 4].words[index % 4];
     }
 
+    template<std::size_t NWord>
+    static constexpr RoundKeys from_array(const WordArray<NWord>& mainKey) {
+        RoundKeys result;
+        std::size_t i = 0;
+        for (const auto &word: mainKey.words)
+            result.at_word(i++) = word;
+
+        std::uint8_t round_constant{1};
+        for (; i < word_count; ++i) {
+            auto temp = result.at_word(i - 1);
+            if (i % NWord == 0) {
+                temp = Word::shift_left(temp, 1);
+                temp = Word::substitute_with(temp, SBox);
+                const auto new_round_constant = xtime(round_constant);
+                temp ^= round_constant;
+                round_constant = new_round_constant;
+            }
+            else if (NWord > 6 && i % NWord == 4) {
+                temp = Word::substitute_with(temp, SBox);
+            }
+            result.at_word(i) = result.at_word(i - NWord) ^ temp;
+        }
+        return result;
+    }
+
+    static constexpr StateMatrix encrypt(const RoundKeys& key, const StateMatrix& origin) {
+        auto result = StateMatrix::add_round_key(origin, key.states[0]);
+        for (std::size_t round = 1; round < NRound; ++round) {
+            result = StateMatrix::substitute_with(result, SBox);
+            result = StateMatrix::shift_rows(result);
+            result = StateMatrix::mix_columns(result, CMDSMatrix);
+            result = StateMatrix::add_round_key(result, key.states[round]);
+        }
+        result = StateMatrix::substitute_with(result, SBox);
+        result = StateMatrix::shift_rows(result);
+        result = StateMatrix::add_round_key(result, key.states[NRound]);
+        return result;
+    }
+
+    static constexpr StateMatrix decrypt(const RoundKeys& key, const StateMatrix& origin) noexcept {
+        auto result = StateMatrix::add_round_key(origin, key.states[NRound]);
+        for (auto round = NRound - 1; round > 0; --round) {
+            result = StateMatrix::inv_shift_rows(result);
+            result = StateMatrix::substitute_with(result, InvSBox);
+            result = StateMatrix::add_round_key(result, key.states[round]);
+            result = StateMatrix::mix_columns(result, InvCMDSMatrix);
+        }
+        result = StateMatrix::inv_shift_rows(result);
+        result = StateMatrix::substitute_with(result, InvSBox);
+        result = StateMatrix::add_round_key(result, key.states[0]);
+        return result;
+    }
+
     /// @brief 从主密钥扩展得到轮密钥
     /// @tparam NWord 主密钥字数
     /// @param mainKey 主密钥数据
@@ -76,11 +129,17 @@ struct RoundKeys {
         }
     }
 
+    /// @brief 从主密钥扩展得到轮密钥
+    /// @tparam NWord 主密钥字数
+    /// @param mainKey 主密钥数据
     template<std::size_t NWord>
     void expand_from(const std::array<Word, NWord>& mainKey) {
         expand_from(std::span<const Word, NWord>{mainKey});
     }
 
+    /// @brief 从主密钥扩展得到轮密钥
+    /// @tparam NWord 主密钥字数
+    /// @param mainKey 主密钥数据
     template<std::size_t NWord>
     void expand_from(const WordArray<NWord>& mainKey) {
         expand_from(mainKey.words);
@@ -111,7 +170,7 @@ struct RoundKeys {
     /// @param origin 需要解密的数据状态矩阵
     void decrypt(StateMatrix &origin) const noexcept {
         origin.add_round_key(states[NRound]);
-        for (std::size_t round = NRound - 1; round > 0; --round) {
+        for (auto round = NRound - 1; round > 0; --round) {
             origin.inv_shift_rows();
             origin.substitute_with(InvSBox);
             origin.add_round_key(states[round]);
@@ -127,6 +186,7 @@ struct RoundKeys {
     void decrypt(const std::span<std::uint8_t, 16> &origin) const noexcept {
         decrypt(*reinterpret_cast<StateMatrix*>(origin.data()));
     }
+
 };
 
 }

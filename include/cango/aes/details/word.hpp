@@ -14,6 +14,20 @@ struct Word {
     using bytes_t = std::array<uint8_t, byte_count>;
     bytes_t bytes;
 
+    static constexpr Word shift_left(const Word& origin, const std::uint8_t n) noexcept {
+        Word result; // NOLINT(*-pro-type-member-init)
+        for (std::uint8_t i = 0; i < byte_count; ++i)
+            result.bytes[i] = origin.bytes[(i + n) % byte_count];
+        return result;
+    }
+
+    static constexpr Word substitute_with(const Word& origin, const sbox_t& sbox) noexcept {
+        Word result; // NOLINT(*-pro-type-member-init)
+        for (std::uint8_t i = 0; i < byte_count; ++i)
+            result.bytes[i] = sbox[origin.bytes[i]];
+        return result;
+    }
+
     /// @brief 将自己的每个字节向左循环移动 n 格
     void shift_left(const std::uint8_t n) noexcept {
         switch (n) {
@@ -70,6 +84,14 @@ struct Word {
         bytes[0] ^= rcon;
         return *this;
     }
+
+    friend constexpr bool operator==(const Word& a, const Word& b) noexcept {
+        return a.bytes == b.bytes;
+    }
+
+    friend constexpr bool operator!=(const Word& a, const Word& b) noexcept {
+        return a.bytes != b.bytes;
+    }
 };
 
 /// @brief 字列表
@@ -78,12 +100,20 @@ template<std::size_t N>
 struct WordArray {
     /// @brief 字数
     static constexpr auto word_count = N;
+    static constexpr auto byte_count = word_count * 4;
 
     /// @brief 字列表类型
     using words_t = std::array<Word, word_count>;
 
     /// @brief 字列表
     words_t words;
+
+    static constexpr WordArray from_array(const std::array<std::uint8_t, byte_count>& nums) noexcept {
+        WordArray result;
+        for (std::uint8_t i = 0; i < byte_count; ++i)
+            result.words[i / 4].bytes[i % 4] = nums[i];
+        return result;
+    }
 
     /// @brief 将字列表转换为目标列表，便于一些操作
     /// @tparam T 目标类型

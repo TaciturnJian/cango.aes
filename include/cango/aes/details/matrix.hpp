@@ -54,6 +54,80 @@ struct StateMatrix : WordArray<4> {
         shift_row<3>(3);
     }
 
+    static constexpr StateMatrix from_array(const std::array<std::uint8_t, 16>& nums) noexcept {
+        StateMatrix result{};
+        for (std::uint8_t i = 0; i < 4; ++i)
+            for (std::uint8_t j = 0; j < 4; ++j)
+                result.words[i].bytes[j] = nums[i * 4 + j];
+        return result;
+    }
+
+    static constexpr std::array<std::uint8_t, 16> to_array(const StateMatrix& matrix) noexcept {
+        std::array<std::uint8_t, 16> result{};
+        for (std::uint8_t i = 0; i < 4; ++i)
+            for (std::uint8_t j = 0; j < 4; ++j)
+                result[i * 4 + j] = matrix.words[i].bytes[j];
+        return result;
+    }
+
+    static constexpr StateMatrix shift_rows(const StateMatrix &matrix) noexcept {
+        // (row, col) after shift rows (row', col')
+        // col 0      1      2      3  row
+        // (0, 0) (0, 1) (0, 2) (0, 3)  0
+        // (1, 1) (1, 2) (1, 3) (1, 0)  1
+        // (2, 2) (2, 3) (2, 0) (2, 1)  2
+        // (3, 3) (3, 0) (3, 1) (3, 2)  3
+        // row' = row
+        // col' = (col + row) % 4
+
+        StateMatrix result{};
+        for (std::uint8_t col = 0; col < 4; ++col)
+            for (std::uint8_t row = 0; row < 4; ++row)
+                result.words[col].bytes[row] = matrix.words[(col + row) % 4].bytes[row];
+        return result;
+    }
+
+    static constexpr StateMatrix inv_shift_rows(const StateMatrix& matrix) noexcept {
+        // (row, col) after inv shift rows
+        // col 0      1      2      3  row
+        // (0, 0) (0, 1) (0, 2) (0, 3)  0
+        // (1, 3) (1, 0) (1, 1) (1, 2)  1
+        // (2, 2) (2, 3) (2, 0) (2, 1)  2
+        // (3, 1) (3, 2) (3, 3) (3, 0)  3
+        // row' = row
+        // col' = ( 4 + col - row ) % 4
+        StateMatrix result{};
+        for (std::uint8_t col = 0; col < 4; ++col)
+            for (std::uint8_t row = 0; row < 4; ++row)
+                result.words[col].bytes[row] = matrix.words[(4 + col - row) % 4].bytes[row];
+        return result;
+    }
+
+    static constexpr StateMatrix substitute_with(const StateMatrix& matrix, const sbox_t& sbox) noexcept {
+        StateMatrix result{};
+        for (std::uint8_t i = 0; i < 4; ++i)
+            for (std::uint8_t j = 0; j < 4; ++j)
+                result.words[i].bytes[j] = sbox[matrix.words[i].bytes[j]];
+        return result;
+    }
+
+    static constexpr StateMatrix mix_columns(const StateMatrix& matrix, const mds_t& mds) noexcept {
+        StateMatrix result{};
+        for (std::uint8_t col = 0; col < 4; ++col)
+            for (std::uint8_t i = 0; i < 4; ++i)
+                for (std::uint8_t j = 0; j < 4; ++j)
+                    result.words[col].bytes[i] ^= gf_mul(mds[i * 4 + j], matrix.words[col].bytes[j]);
+        return result;
+    }
+
+    static constexpr StateMatrix add_round_key(const StateMatrix& matrix, const StateMatrix& key) noexcept {
+        StateMatrix result{};
+        for (std::uint8_t i = 0; i < 4; ++i)
+            for (std::uint8_t j = 0; j < 4; ++j)
+                result.words[i].bytes[j] = matrix.words[i].bytes[j] ^ key.words[i].bytes[j];
+        return result;
+    }
+
     /// @brief 逆行移位操作
     void inv_shift_rows() {
         shift_row<1>(3);
@@ -83,6 +157,14 @@ struct StateMatrix : WordArray<4> {
     /// @param key 轮密钥
     void add_round_key(const StateMatrix &key) noexcept {
         for (std::uint8_t i = 0; i < 4; ++i) { words[i] ^= key.words[i]; }
+    }
+
+    friend constexpr bool operator==(const StateMatrix& a, const StateMatrix& b) noexcept {
+        return a.words == b.words;
+    }
+
+    friend constexpr bool operator!=(const StateMatrix& a, const StateMatrix& b) noexcept {
+        return a.words != b.words;
     }
 };
 

@@ -6,6 +6,7 @@
 
 namespace cango::aes::details {
 
+/// @brief Substitute Box 字节替换盒类型
 using sbox_t = std::array<std::uint8_t, 256>;
 
 /// @brief 正向替换盒

@@ -82,7 +82,7 @@ struct RoundConstant {
     std::uint8_t value{1};
 
     /// @brief 进行一步计算，返回计算之前的值
-    std::uint8_t step() {
+    constexpr std::uint8_t step() {
         const auto old = value;
         value = xtime(value);
         return old;
