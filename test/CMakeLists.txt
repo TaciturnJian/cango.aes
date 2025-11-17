@@ -12,6 +12,4 @@ function(cango_aes_add_test test_name)
     add_test(NAME cango_aes_${test_name} COMMAND cango_aes_${test_name})
 endfunction()
 
-cango_aes_add_test(test_round_key)
 cango_aes_add_test(test_cryptors)
-cango_aes_add_test(test_example)

@@ -1,29 +1,13 @@
 #ifndef INCLUDE_CANGO_AES_DETAILS_MATRIX
 #define INCLUDE_CANGO_AES_DETAILS_MATRIX
 
+#include <array>
+#include <cstdint>
+
 #include "sbox.hpp"
 #include "word.hpp"
 
 namespace cango::aes::details {
-
-/// @brief mds 矩阵类型
-using mds_t = std::array<std::uint8_t, 16>;
-
-/// Circulant MDS Matrix ，循环 MDS 矩阵，用于状态矩阵的列混合
-constexpr mds_t CMDSMatrix = {
-    2, 3, 1, 1,
-    1, 2, 3, 1,
-    1, 1, 2, 3,
-    3, 1, 1, 2
-};
-
-/// Inverse circulant MDS matrix ，逆循环 MDS 矩阵，用于状态矩阵的逆列混合
-constexpr mds_t InvCMDSMatrix = {
-    14, 11, 13, 9,
-    9, 14, 11, 13,
-    13, 9, 14, 11,
-    11, 13, 9, 14
-};
 
 /// @brief 状态矩阵，4行4列的字节矩阵，一个字一列
 struct StateMatrix : WordArray<4> {
@@ -54,6 +38,9 @@ struct StateMatrix : WordArray<4> {
         shift_row<3>(3);
     }
 
+    /// @brief 从字节列表转换得到状态矩阵
+    /// @param nums 字节列表，将会按列存入状态矩阵
+    /// @return 与字节列表元素一一对应的状态矩阵
     static constexpr StateMatrix from_array(const std::array<std::uint8_t, 16>& nums) noexcept {
         StateMatrix result{};
         for (std::uint8_t i = 0; i < 4; ++i)
@@ -62,6 +49,9 @@ struct StateMatrix : WordArray<4> {
         return result;
     }
 
+    /// @brief 将状态矩阵转换为字节列表
+    /// @param matrix 状态矩阵，将会按列存入字节列表
+    /// @return 与状态矩阵元素一一对应的字节列表
     static constexpr std::array<std::uint8_t, 16> to_array(const StateMatrix& matrix) noexcept {
         std::array<std::uint8_t, 16> result{};
         for (std::uint8_t i = 0; i < 4; ++i)
@@ -70,6 +60,9 @@ struct StateMatrix : WordArray<4> {
         return result;
     }
 
+    /// @brief 行移位操作
+    /// @param matrix 状态矩阵
+    /// @return 行移位后的状态矩阵
     static constexpr StateMatrix shift_rows(const StateMatrix &matrix) noexcept {
         // (row, col) after shift rows (row', col')
         // col 0      1      2      3  row
@@ -87,6 +80,9 @@ struct StateMatrix : WordArray<4> {
         return result;
     }
 
+    /// @brief 逆行移位操作
+    /// @param matrix 状态矩阵
+    /// @return 逆行移位的状态矩阵
     static constexpr StateMatrix inv_shift_rows(const StateMatrix& matrix) noexcept {
         // (row, col) after inv shift rows
         // col 0      1      2      3  row
@@ -103,6 +99,10 @@ struct StateMatrix : WordArray<4> {
         return result;
     }
 
+    /// @brief 字节替换操作
+    /// @param matrix 状态矩阵
+    /// @param sbox 替换盒
+    /// @return 字节替换后的状态矩阵
     static constexpr StateMatrix substitute_with(const StateMatrix& matrix, const sbox_t& sbox) noexcept {
         StateMatrix result{};
         for (std::uint8_t i = 0; i < 4; ++i)
@@ -111,6 +111,9 @@ struct StateMatrix : WordArray<4> {
         return result;
     }
 
+    /// @brief 列混合操作
+    /// @param matrix 状态矩阵
+    /// @param mds
     static constexpr StateMatrix mix_columns(const StateMatrix& matrix, const mds_t& mds) noexcept {
         StateMatrix result{};
         for (std::uint8_t col = 0; col < 4; ++col)
@@ -120,6 +123,7 @@ struct StateMatrix : WordArray<4> {
         return result;
     }
 
+    /// @brief 轮异或操作
     static constexpr StateMatrix add_round_key(const StateMatrix& matrix, const StateMatrix& key) noexcept {
         StateMatrix result{};
         for (std::uint8_t i = 0; i < 4; ++i)
@@ -159,12 +163,14 @@ struct StateMatrix : WordArray<4> {
         for (std::uint8_t i = 0; i < 4; ++i) { words[i] ^= key.words[i]; }
     }
 
-    friend constexpr bool operator==(const StateMatrix& a, const StateMatrix& b) noexcept {
-        return a.words == b.words;
+    /// @brief 比较每个状态，判断是否相等
+    friend constexpr bool operator==(const StateMatrix& lhs, const StateMatrix& rhs) noexcept {
+        return lhs.words == rhs.words;
     }
 
-    friend constexpr bool operator!=(const StateMatrix& a, const StateMatrix& b) noexcept {
-        return a.words != b.words;
+    /// @brief 比较每个状态，判断是否相等
+    friend constexpr bool operator!=(const StateMatrix& lhs, const StateMatrix& rhs) noexcept {
+        return lhs.words != rhs.words;
     }
 };
 

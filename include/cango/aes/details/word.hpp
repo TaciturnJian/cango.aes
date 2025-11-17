@@ -108,6 +108,7 @@ struct WordArray {
     /// @brief 字列表
     words_t words;
 
+    /// @brief 从字节列表得到字列表
     static constexpr WordArray from_array(const std::array<std::uint8_t, byte_count>& nums) noexcept {
         WordArray result;
         for (std::uint8_t i = 0; i < byte_count; ++i)

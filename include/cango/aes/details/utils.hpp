@@ -1,7 +1,6 @@
 #ifndef INCLUDE_CANGO_AES_DETAILS_UTILS
 #define INCLUDE_CANGO_AES_DETAILS_UTILS
 
-#include <cstddef>
 #include <cstdint>
 
 namespace cango::aes::details {

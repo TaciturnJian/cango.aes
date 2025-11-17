@@ -1,9 +1,10 @@
 #ifndef INCLUDE_CANGO_AES_DETAILS_KEY
 #define INCLUDE_CANGO_AES_DETAILS_KEY
 
-#include <span>
+#include <array>
 
 #include "matrix.hpp"
+#include "word.hpp"
 
 namespace cango::aes::details {
 
@@ -45,16 +46,19 @@ struct RoundKeys {
 
     /// @brief 访问目标字
     /// @param index 目标下标
+    /// @warning 不检查越界
     [[nodiscard]] constexpr Word &at_word(const std::size_t index) noexcept {
         return states[index / 4].words[index % 4];
     }
 
     /// @brief 访问目标字
     /// @param index 目标下标
+    /// @warning 不检查越界
     [[nodiscard]] constexpr const Word &at_word(const std::size_t index) const noexcept {
         return states[index / 4].words[index % 4];
     }
 
+    /// @brief 从字列表主钥展开轮钥
     template<std::size_t NWord>
     static constexpr RoundKeys from_array(const WordArray<NWord>& mainKey) {
         RoundKeys result;
@@ -62,15 +66,13 @@ struct RoundKeys {
         for (const auto &word: mainKey.words)
             result.at_word(i++) = word;
 
-        std::uint8_t round_constant{1};
+        RoundConstant rcon{};
         for (; i < word_count; ++i) {
             auto temp = result.at_word(i - 1);
             if (i % NWord == 0) {
                 temp = Word::shift_left(temp, 1);
                 temp = Word::substitute_with(temp, SBox);
-                const auto new_round_constant = xtime(round_constant);
-                temp ^= round_constant;
-                round_constant = new_round_constant;
+                temp ^= rcon.step();
             }
             else if (NWord > 6 && i % NWord == 4) {
                 temp = Word::substitute_with(temp, SBox);
@@ -80,6 +82,9 @@ struct RoundKeys {
         return result;
     }
 
+    /// @brief 使用轮密钥列表对数据进行加密
+    /// @param key 轮密钥
+    /// @param origin 需要加密的数据状态矩阵
     static constexpr StateMatrix encrypt(const RoundKeys& key, const StateMatrix& origin) {
         auto result = StateMatrix::add_round_key(origin, key.states[0]);
         for (std::size_t round = 1; round < NRound; ++round) {
@@ -94,6 +99,9 @@ struct RoundKeys {
         return result;
     }
 
+    /// @brief 使用轮密钥列表对数据进行解密，直接在原矩阵上操作
+    /// @param key 轮密钥
+    /// @param origin 需要解密的数据状态矩阵
     static constexpr StateMatrix decrypt(const RoundKeys& key, const StateMatrix& origin) noexcept {
         auto result = StateMatrix::add_round_key(origin, key.states[NRound]);
         for (auto round = NRound - 1; round > 0; --round) {
@@ -112,9 +120,9 @@ struct RoundKeys {
     /// @tparam NWord 主密钥字数
     /// @param mainKey 主密钥数据
     template<std::size_t NWord>
-    void expand_from(const std::span<const Word, NWord> mainKey) {
+    void expand_from(const WordArray<NWord>& mainKey) {
         std::size_t i = 0;
-        for (const auto &word: mainKey) at_word(i++) = word;
+        for (const auto &word: mainKey.words) at_word(i++) = word;
 
         RoundConstant round_constant{};
         for (; i < word_count; ++i) {
@@ -129,23 +137,7 @@ struct RoundKeys {
         }
     }
 
-    /// @brief 从主密钥扩展得到轮密钥
-    /// @tparam NWord 主密钥字数
-    /// @param mainKey 主密钥数据
-    template<std::size_t NWord>
-    void expand_from(const std::array<Word, NWord>& mainKey) {
-        expand_from(std::span<const Word, NWord>{mainKey});
-    }
-
-    /// @brief 从主密钥扩展得到轮密钥
-    /// @tparam NWord 主密钥字数
-    /// @param mainKey 主密钥数据
-    template<std::size_t NWord>
-    void expand_from(const WordArray<NWord>& mainKey) {
-        expand_from(mainKey.words);
-    }
-
-    /// @brief 使用轮密钥列表对数据进行加密
+    /// @brief 使用轮密钥列表对数据进行加密，直接在原矩阵上操作
     /// @param origin 需要加密的数据状态矩阵
     void encrypt(StateMatrix &origin) const noexcept {
         origin.add_round_key(states[0]);
@@ -160,13 +152,7 @@ struct RoundKeys {
         origin.add_round_key(states[NRound]);
     }
 
-    /// @brief 使用轮密钥列表对数据进行加密
-    /// @param origin 需要加密的数据
-    void encrypt(const std::span<std::uint8_t, 16> &origin) const noexcept {
-        encrypt(*reinterpret_cast<StateMatrix*>(origin.data()));
-    }
-
-    /// @brief 使用轮密钥列表对数据进行解密
+    /// @brief 使用轮密钥列表对数据进行解密，直接在原矩阵上操作
     /// @param origin 需要解密的数据状态矩阵
     void decrypt(StateMatrix &origin) const noexcept {
         origin.add_round_key(states[NRound]);
@@ -180,13 +166,6 @@ struct RoundKeys {
         origin.substitute_with(InvSBox);
         origin.add_round_key(states[0]);
     }
-
-    /// @brief 使用轮密钥列表对数据进行解密
-    /// @param origin 需要解密的数据
-    void decrypt(const std::span<std::uint8_t, 16> &origin) const noexcept {
-        decrypt(*reinterpret_cast<StateMatrix*>(origin.data()));
-    }
-
 };
 
 }

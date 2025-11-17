@@ -37,12 +37,6 @@ bool test_cryptor(const std::string_view name, const auto &plainText, const auto
     return true;
 }
 
-constexpr StateMatrix sm11(const std::uint8_t i, const std::uint8_t j) {
-    StateMatrix result{};
-    result.words[i].bytes[j] = 0x11;
-    return result;
-}
-
 /// @brief AES-128 example from FIPS-197 Appendix C.1
 /// https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.197.pdf
 bool test_aes128() {
