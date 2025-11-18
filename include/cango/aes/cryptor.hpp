@@ -12,9 +12,26 @@ class Cryptor {
     details::RoundKeys<NRound> keys{};
 
 public:
+    /// @brief 数据块的类型，4 * 4 字节列表
+    using block_t = std::array<std::uint8_t, 4 * 4>;
+
     /// @brief 暴露轮密钥为公开成员的 AES 密码工具
     struct BareCryptor {
         details::RoundKeys<NRound> keys;
+
+        /// @brief 加密数据
+        [[nodiscard]] constexpr block_t encrypt(const block_t& data) const noexcept {
+            const auto input_mat = details::StateMatrix::from_array(data);
+            const auto output_mat = details::RoundKeys<NRound>::encrypt(keys, input_mat);
+            return details::StateMatrix::to_array(output_mat);
+        }
+
+        /// @brief 解密数据
+        [[nodiscard]] constexpr block_t decrypt(const block_t& data) const noexcept {
+            const auto input_mat = details::StateMatrix::from_array(data);
+            const auto output_mat = details::RoundKeys<NRound>::decrypt(keys, input_mat);
+            return details::StateMatrix::to_array(output_mat);
+        }
     };
 
     /// @brief 默认构造函数，不执行任何操作
@@ -30,7 +47,7 @@ public:
     }
 
     /// @brief 加密数据
-    void encrypt(std::array<std::uint8_t, 4 * 4>& data) const noexcept {
+    void encrypt(block_t& data) const noexcept {
         keys.encrypt(reinterpret_cast<details::StateMatrix&>(data));
     }
 
@@ -39,29 +56,9 @@ public:
         return {details::RoundKeys<NRound>::from_array(main_key)};
     }
 
-    /// @brief 加密数据
-    static constexpr std::array<std::uint8_t, 4 * 4> encrypt(
-        const BareCryptor& cryptor,
-        const std::array<std::uint8_t, 4 * 4>& data
-        ) noexcept {
-        const auto input_mat = details::StateMatrix::from_array(data);
-        const auto output_mat = details::RoundKeys<NRound>::encrypt(cryptor.keys, input_mat);
-        return details::StateMatrix::to_array(output_mat);
-    }
-
     /// @brief 解密数据
-    void decrypt(std::array<std::uint8_t, 4 * 4>& data) const noexcept {
+    void decrypt(block_t& data) const noexcept {
         keys.decrypt(reinterpret_cast<details::StateMatrix&>(data));
-    }
-
-    /// @brief 解密数据
-    static constexpr std::array<std::uint8_t, 4 * 4> decrypt(
-        const BareCryptor& cryptor,
-        const std::array<std::uint8_t, 4 * 4>& data
-        ) noexcept {
-        const auto input_mat = details::StateMatrix::from_array(data);
-        const auto output_mat = details::RoundKeys<NRound>::decrypt(cryptor.keys, input_mat);
-        return details::StateMatrix::to_array(output_mat);
     }
 };
 

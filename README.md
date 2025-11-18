@@ -22,8 +22,8 @@ constexpr std::array<std::uint8_t, 16> plain {/*原文*/};
 
 // 编译时加密解密
 constexpr auto const_cryptor = AES128Cryptor::create_const(main_key);
-constexpr auto encrypted = AES128Cryptor::encrypt(const_cryptor, plain);
-constexpr auto decrypted = AES128Cryptor::decrypt(const_cryptor, encrypted);
+constexpr auto encrypted = const_cryptor.encrypt(plain);
+constexpr auto decrypted = const_cryptor.decrypt(encrypted);
 static_assert(decrypted == plain, "failed: " "decrypted == plain");
 
 // 运行时加密解密

@@ -56,10 +56,6 @@ struct Word {
         }
     }
 
-    void rotate() noexcept {
-        shift_left(1);
-    }
-
     /// @brief 将自己的每个字节向右循环移动 n 格
     void shift_right(const std::uint8_t n) noexcept { shift_left(4 - (n % 4)); }
 
