@@ -8,6 +8,12 @@
 using namespace cango::aes;
 using namespace cango::aes::details;
 
+constexpr auto pipe(const auto& func, const auto& arg) {
+    auto result = arg;
+    func(result);
+    return result;
+}
+
 template<typename TCryptor>
 bool test_cryptor(const std::string_view name, const auto &plainText, const auto &key, const auto &expectedCipher) {
     const TCryptor cryptor{key};
@@ -64,12 +70,11 @@ bool test_aes128() {
         0x70, 0xb4, 0xc5, 0x5a
     };
 
-    constexpr auto key_mat = WordArray<4>::from_array(key);
     constexpr auto plain_text_mat = StateMatrix::from_array(plain_text);
     constexpr auto cipher_mat = StateMatrix::from_array(expected_cipher);
-    constexpr auto round_keys = RoundKeys<10>::from_array<4>(key_mat);
-    constexpr auto encrypted_mat = RoundKeys<10>::encrypt(round_keys, plain_text_mat);
-    constexpr auto decrypted_mat = RoundKeys<10>::decrypt(round_keys, encrypted_mat);
+    constexpr auto round_keys = RoundKeys<10>::from_array(key);
+    constexpr auto encrypted_mat = round_keys.encrypt(plain_text_mat);
+    constexpr auto decrypted_mat = round_keys.decrypt(encrypted_mat);
     static_assert(encrypted_mat == cipher_mat, "failed: " "encrypted_mat == cipher_mat");
     static_assert(decrypted_mat == plain_text_mat, "failed: " "decrypted_mat == plain_text_mat");
 
@@ -105,12 +110,11 @@ bool test_aes192() {
         0xec, 0x0d, 0x71, 0x91
     };
 
-    constexpr auto key_mat = WordArray<6>::from_array(key);
     constexpr auto plain_text_mat = StateMatrix::from_array(plain_text);
     constexpr auto cipher_mat = StateMatrix::from_array(expected_cipher);
-    constexpr auto round_keys = RoundKeys<12>::from_array<6>(key_mat);
-    constexpr auto encrypted_mat = RoundKeys<12>::encrypt(round_keys, plain_text_mat);
-    constexpr auto decrypted_mat = RoundKeys<12>::decrypt(round_keys, encrypted_mat);
+    constexpr auto round_keys = RoundKeys<12>::from_array(key);
+    constexpr auto encrypted_mat = round_keys.encrypt(plain_text_mat);
+    constexpr auto decrypted_mat = round_keys.decrypt(encrypted_mat);
     static_assert(encrypted_mat == cipher_mat, "failed: " "encrypted_mat == cipher_mat");
     static_assert(decrypted_mat == plain_text_mat, "failed: " "decrypted_mat == plain_text_mat");
 
@@ -148,12 +152,11 @@ bool test_aes256() {
         0x4b, 0x49, 0x60, 0x89
     };
 
-    constexpr auto key_mat = WordArray<8>::from_array(key);
     constexpr auto plain_text_mat = StateMatrix::from_array(plain_text);
     constexpr auto cipher_mat = StateMatrix::from_array(expected_cipher);
-    constexpr auto round_keys = RoundKeys<14>::from_array<8>(key_mat);
-    constexpr auto encrypted_mat = RoundKeys<14>::encrypt(round_keys, plain_text_mat);
-    constexpr auto decrypted_mat = RoundKeys<14>::decrypt(round_keys, encrypted_mat);
+    constexpr auto round_keys = RoundKeys<14>::from_array(key);
+    constexpr auto encrypted_mat = round_keys.encrypt(plain_text_mat);
+    constexpr auto decrypted_mat = round_keys.decrypt(encrypted_mat);
     static_assert(encrypted_mat == cipher_mat, "failed: " "encrypted_mat == cipher_mat");
     static_assert(decrypted_mat == plain_text_mat, "failed: " "decrypted_mat == plain_text_mat");
 
@@ -164,14 +167,15 @@ void compile_example() {
     constexpr std::array<std::uint8_t, 16> main_key{/*主密钥, AES128 规定主密钥有 128 二进制位*/};
     constexpr std::array<std::uint8_t, 16> plain {/*原文*/};
 
+    //初始化工具
+    constexpr AES128Cryptor cryptor{main_key};
+
     // 编译时加密解密
-    constexpr auto const_cryptor = AES128Cryptor::create_const(main_key);
-    constexpr auto encrypted = const_cryptor.encrypt(plain);
-    constexpr auto decrypted = const_cryptor.decrypt(encrypted);
+    constexpr auto encrypted = cryptor.encrypt(plain);
+    constexpr auto decrypted = cryptor.decrypt(encrypted);
     static_assert(decrypted == plain, "failed: " "decrypted == plain");
 
     // 运行时加密解密
-    const AES128Cryptor cryptor{main_key};//初始化工具
     auto buffer = plain;
     cryptor.encrypt(buffer);
     cryptor.decrypt(buffer);

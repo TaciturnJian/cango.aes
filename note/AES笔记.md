@@ -15,18 +15,21 @@ AES 全称 Advanced Encryption Standard ，翻译为高级加密标准，是一�
 用类似接口的语法表示如下：
 
 ```c++
+constexpr std::array<std::uint8_t, 16> main_key{/*主密钥, AES128 规定主密钥有 128 二进制位*/};
+constexpr std::array<std::uint8_t, 16> plain {/*原文*/};
 
-template<std::size_t NKeyBits, std::size_t NRound>
-class AES {
-    AESMember<NKeyBits, NRound> member; 
-public:
-    using data_block_t = std::array<std::byte, 32>;
-    using main_key_t = std::array<std::byte, NKeyBits / 8>;
-    void initialize(const main_key_t& key) const noexcept;
-    constexpr data_block_t encrypt(const data_block_t& input) const noexcept;
-    constexpr data_block_t decrypt(const data_block_t& input) const noexcept;
-};
+// 编译时加密解密
+constexpr auto const_cryptor = AES128Cryptor::create_const(main_key);
+constexpr auto encrypted = const_cryptor.encrypt(plain);
+constexpr auto decrypted = const_cryptor.decrypt(encrypted);
+static_assert(decrypted == plain, "failed: " "decrypted == plain");
 
+// 运行时加密解密
+const AES128Cryptor cryptor{main_key};//初始化工具
+auto buffer = plain;
+cryptor.encrypt(buffer);
+cryptor.decrypt(buffer);
+assert(buffer == plain);
 ```
 
 ## AES 的历史

@@ -20,19 +20,19 @@
 constexpr std::array<std::uint8_t, 16> main_key{/*主密钥, AES128 规定主密钥有 128 二进制位*/};
 constexpr std::array<std::uint8_t, 16> plain {/*原文*/};
 
+//初始化工具
+constexpr AES128Cryptor cryptor{main_key};
+
 // 编译时加密解密
-constexpr auto const_cryptor = AES128Cryptor::create_const(main_key);
-constexpr auto encrypted = const_cryptor.encrypt(plain);
-constexpr auto decrypted = const_cryptor.decrypt(encrypted);
+constexpr auto encrypted = cryptor.encrypt(plain);
+constexpr auto decrypted = cryptor.decrypt(encrypted);
 static_assert(decrypted == plain, "failed: " "decrypted == plain");
 
 // 运行时加密解密
-const AES128Cryptor cryptor{main_key};//初始化工具
 auto buffer = plain;
 cryptor.encrypt(buffer);
 cryptor.decrypt(buffer);
 assert(buffer == plain);
-
 ```
 
 ## 参考(reference)
